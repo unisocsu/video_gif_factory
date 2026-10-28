@@ -30,8 +30,17 @@ jobs:
       - name: Build EXE
         run: pyinstaller --onefile --windowed --name VideoToGif --add-binary "ffmpeg.exe;." video_to_gif.py
 
-      - name: Upload EXE
+      - name: Package artifact twice inside zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path stage, final | Out-Null
+          # זיפ ראשון: הקובץ עצמו
+          Compress-Archive -Path dist/VideoToGif.exe -DestinationPath stage/VideoToGif.zip -Force
+          # זיפ שני: הזיפ הראשון עטוף בזיפ נוסף
+          Compress-Archive -Path stage/VideoToGif.zip -DestinationPath final/VideoToGif-package.zip -Force
+
+      - name: Upload package
         uses: actions/upload-artifact@v4
         with:
           name: VideoToGif-windows
-          path: dist/VideoToGif.exe
+          path: final/VideoToGif-package.zip

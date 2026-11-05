@@ -20,7 +20,6 @@ jobs:
           install: >-
             base-devel
             mingw-w64-x86_64-toolchain
-            mingw-w64-x86_64-yasm
 
       - name: Build minimal ffmpeg (only what GIF conversion needs)
         shell: msys2 {0}
@@ -35,7 +34,7 @@ jobs:
             --target-os=mingw32 \
             --enable-static --disable-shared \
             --disable-everything --disable-doc --disable-debug \
-            --disable-network --disable-autodetect \
+            --disable-network --disable-autodetect --disable-x86asm \
             --disable-ffplay --disable-ffprobe \
             --enable-small \
             --enable-protocol=file \

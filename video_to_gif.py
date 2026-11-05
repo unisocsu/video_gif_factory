@@ -66,7 +66,7 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(APP_TITLE)
-        self.geometry("640x430")
+        self.geometry("640x470")
         self.resizable(False, False)
 
         self.src = tk.StringVar()
@@ -79,6 +79,8 @@ class App(tk.Tk):
 
     def build(self):
         pad = {"padx": 12, "pady": 6}
+
+        tk.Label(self, text="שלום רלבג מה קורה", font=("Arial", 14, "bold"), fg="#1565c0").pack(pady=(10, 0))
 
         tk.Label(self, text="שלב 1: בחירת קובץ וידאו", font=("Arial", 12, "bold")).pack(anchor="e", **pad)
         row = tk.Frame(self)

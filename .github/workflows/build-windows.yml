@@ -7,28 +7,62 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up MSYS2 (toolchain for building ffmpeg)
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            base-devel
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-yasm
+
+      - name: Build minimal ffmpeg (only what GIF conversion needs)
+        shell: msys2 {0}
+        run: |
+          cd "$(cygpath -u "$GITHUB_WORKSPACE")"
+          curl -L -o ffmpeg.tar.xz https://ffmpeg.org/releases/ffmpeg-7.1.tar.xz
+          tar -xf ffmpeg.tar.xz
+          cd ffmpeg-7.1
+          ./configure \
+            --prefix="$PWD/install" \
+            --arch=x86_64 \
+            --target-os=mingw32 \
+            --enable-static --disable-shared \
+            --disable-everything --disable-doc --disable-debug \
+            --disable-network --disable-autodetect \
+            --disable-ffplay --disable-ffprobe \
+            --enable-small \
+            --enable-protocol=file \
+            --enable-demuxer=mov,matroska,avi,asf,flv,mpegps,mpegts,mpegvideo,h264,hevc \
+            --enable-parser=h264,hevc,mpeg4video,mpegvideo,vp8,vp9 \
+            --enable-decoder=h264,hevc,mpeg4,mpeg2video,mpeg1video,vp8,vp9,mjpeg,png,wmv1,wmv2,wmv3,vc1,msmpeg4v3,rawvideo \
+            --enable-filter=fps,scale,palettegen,paletteuse,split,format,null,buffer,buffersink \
+            --enable-muxer=gif \
+            --enable-encoder=gif \
+            --enable-avfilter --enable-swscale \
+            --enable-small
+          make -j"$(nproc)"
+          cp ffmpeg.exe "$(cygpath -u "$GITHUB_WORKSPACE")/ffmpeg.exe"
+          strip --strip-all "$(cygpath -u "$GITHUB_WORKSPACE")/ffmpeg.exe"
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Download ffmpeg
-        shell: pwsh
+      - name: Install PyInstaller and UPX
         run: |
-          Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile ffmpeg.zip
-          Expand-Archive -Path ffmpeg.zip -DestinationPath ffmpeg_tmp -Force
-          $exe = Get-ChildItem -Path ffmpeg_tmp -Recurse -Filter ffmpeg.exe | Select-Object -First 1
-          Copy-Item -Path $exe.FullName -Destination ffmpeg.exe
-
-      - name: Install PyInstaller
-        run: pip install pyinstaller
+          pip install pyinstaller
+          choco install upx -y
 
       - name: Build EXE
-        run: pyinstaller --onefile --windowed --name VideoToGif --add-binary "ffmpeg.exe;." video_to_gif.py
+        run: pyinstaller --onefile --windowed --upx-dir "C:\ProgramData\chocolatey\bin" --name VideoToGif --add-binary "ffmpeg.exe;." video_to_gif.py
 
       - name: Package artifact twice inside zip
         shell: pwsh
